@@ -53,7 +53,9 @@ connection.once('open', () => {
 						`${process.env.COVID_DATASET_URI}/total/country/${country}`
 					);
 					const countryDetails =
-						countryDetailsArr?.length > 0
+						countryDetailsArr &&
+						countryDetailsArr.length &&
+						countryDetailsArr.length > 0
 							? countryDetailsArr[countryDetailsArr.length - 1]
 							: { country, active: 0 };
 
@@ -85,7 +87,7 @@ connection.once('open', () => {
 		// IIFE to give access to async/await
 		await agenda.start();
 
-		await agenda.every('1 hour', 'clear cronjob table');
+		await agenda.every('1 minute', 'clear cronjob table');
 
 		await agenda.every('2 minutes', 'save active cases by country');
 
