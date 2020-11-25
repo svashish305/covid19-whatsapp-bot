@@ -1,0 +1,4 @@
+{
+	"connectionString": "mongodb://localhost/country-covid-numbers",
+	"secret": "HERE IS THE SECRET FOR MERN CRUD BASIC APP"
+}
