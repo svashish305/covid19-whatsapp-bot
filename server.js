@@ -61,7 +61,7 @@ connection.once('open', () => {
 
 					let record = new CronJob({
 						country,
-						active: countryDetails?.Active,
+						active: countryDetails && countryDetails.Active,
 					});
 
 					record.save(function (err, rec) {
@@ -138,13 +138,13 @@ const calcOutput = async (value, source) => {
 			const countries = await getAllCountries();
 			const givenCountry = countries.find((c) => c.ISO2 === source);
 			let { data: records } = await axios(
-				`${process.env.COVID_DATASET_URI}/total/country/${givenCountry?.Slug}`
+				`${process.env.COVID_DATASET_URI}/total/country/${givenCountry.Slug}`
 			);
 			let { Active: active, Deaths: deaths } = records[records.length - 1];
 			if (value === 'CASES') {
-				return `${givenCountry?.ISO2} Active Cases ${active}`;
+				return `${givenCountry.ISO2} Active Cases ${active}`;
 			} else if (value === 'DEATHS') {
-				return `${givenCountry?.ISO2} Deaths ${deaths}`;
+				return `${givenCountry.ISO2} Deaths ${deaths}`;
 			}
 		} catch (err) {
 			console.log(err);
