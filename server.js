@@ -23,6 +23,7 @@ const connectionOptions = {
 	useFindAndModify: false,
 };
 
+// fetch all countries from the covid19 postman API
 const getAllCountries = async () => {
 	const { data: countries } = await axios.get(
 		`${process.env.COVID_DATASET_URI}/countries`
@@ -30,6 +31,7 @@ const getAllCountries = async () => {
 	return countries;
 };
 
+// establish database connection
 mongoose.connect(
 	process.env.MONGODB_URI || config.connectionString,
 	connectionOptions
@@ -42,8 +44,9 @@ connection.once('open', () => {
 	const agenda = new Agenda({
 		db: { address: process.env.MONGODB_URI, collection: 'CronJob' },
 	});
+
+	// defining a backend polling service to COVID-19 Postman APIs every interval (defined after this block)
 	agenda.define('save active cases by country', async (job) => {
-		// console.log('job ', job);
 		(async function () {
 			try {
 				const countryArr = await getAllCountries();
@@ -59,6 +62,7 @@ connection.once('open', () => {
 							? countryDetailsArr[countryDetailsArr.length - 1]
 							: { country, active: 0 };
 
+					// store the country name and active cases for that country in the database
 					let record = new CronJob({
 						country,
 						active: countryDetails && countryDetails.Active,
@@ -79,7 +83,8 @@ connection.once('open', () => {
 	});
 
 	agenda.define('clear cronjob table', async (job) => {
-		await CronJob.deleteMany({});
+		// await CronJob.deleteMany({});
+		await CronJob.collection.drop();
 	});
 
 	// execute cron job
@@ -87,8 +92,10 @@ connection.once('open', () => {
 		// IIFE to give access to async/await
 		await agenda.start();
 
+		// Running Truncate Table job after every 1 minute
 		await agenda.every('1 minute', 'clear cronjob table');
 
+		// Running save country name and active cases every 2 minutes
 		await agenda.every('2 minutes', 'save active cases by country');
 
 		// Alternatively, you could also do:
@@ -101,6 +108,7 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = require('twilio')(accountSid, authToken);
 
+// send any message to a particular senderID in whatsapp using Twilio APIs
 const sendTextToWhatsapp = async (message, senderID) => {
 	try {
 		await client.messages
@@ -115,6 +123,7 @@ const sendTextToWhatsapp = async (message, senderID) => {
 	}
 };
 
+// receive user's whatsapp text/covid query from '/query-to-bot/ webhook and calculate the response message to be returned
 const calcOutput = async (value, source) => {
 	if (source === 'TOTAL') {
 		try {
@@ -153,10 +162,20 @@ const calcOutput = async (value, source) => {
 	return value + source;
 };
 
+// Public Web Service which takes user's query and creates a webhook as POST request to endpoint '/query-to-bot'
 app.post('/query-to-bot', async (req, res) => {
 	let message = req.body.Body;
 	let senderID = req.body.From;
 	// console.log(message);
+	if (message.indexOf(' ') < 0) {
+		outputMsg = `
+		Please choose following valid COVID queries: 
+			1. CASES <ISO2 Country Code> => Active cases in given country
+			2. DEATHS <ISO2 Country Code> => Deaths in given country
+			3. CASES TOTAL => Total active cases in the world
+			4. DEATHS TOTAL => Total deaths in the world
+		`;
+	}
 	let [value, source] = message.split(' ');
 	let outputMsg;
 	if (
@@ -175,6 +194,7 @@ app.post('/query-to-bot', async (req, res) => {
 	} else {
 		outputMsg = await calcOutput(value, source);
 	}
+	// send retreived output message from calcOutput() to the user's whatsapp
 	await sendTextToWhatsapp(outputMsg, senderID);
 });
 
