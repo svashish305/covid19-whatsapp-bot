@@ -84,7 +84,7 @@ connection.once('open', () => {
 
 	agenda.define('clear cronjob table', async (job) => {
 		// await CronJob.deleteMany({});
-		await cronjob.collection.drop();
+		await cronjobs.collection.drop();
 	});
 
 	// execute cron job
